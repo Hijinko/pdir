@@ -6,6 +6,7 @@
 #include <sysexits.h>
 #include <string.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/stat.h>
 #define RWXRWXRX 0775
 #define RWRWR 0664
@@ -19,10 +20,10 @@ static void create_dirs(const char * base_dir, const char ** directories,
                         size_t dir_size);
 static void create_file(const char * base_dir, const char * filename);
 static void copy_file(const char * src, const char * dest);
+static char * get_exe_dir(void);
 
 int main(int argc, char ** argv)
 {
-    const char * makefile = "./Makefile";
     // get the options for the program
     const char * base_dir = get_args(argc, argv);
 
@@ -48,9 +49,16 @@ int main(int argc, char ** argv)
     size_t dir_size = sizeof(directories) / sizeof(*directories);
     create_dirs(base_dir, directories, dir_size);
     // create a Makefile for the directory
-    char * p_make_copy = join_path(base_dir, "Makefile");
-    copy_file(makefile, p_make_copy);
-    free(p_make_copy);
+    char * p_exe_dir = get_exe_dir();
+    char * p_make_src = join_path(p_exe_dir, "Makefile");
+    char * p_make_dest = join_path(base_dir, "Makefile");
+    copy_file(p_make_src, p_make_dest);
+    free(p_exe_dir);
+    free(p_make_src);
+    free(p_make_dest);
+    p_exe_dir = NULL;
+    p_make_src = NULL;
+    p_make_dest = NULL;
 }
 
 /*
@@ -126,6 +134,12 @@ static int format_print(const char * action, const char * entity)
     return printf("%-20s %s\n", action, entity);
 }
 
+/*
+ * @brief creats directores listed in an array
+ * @param base_dir the base directory to add directories too
+ * @param directories an array of directories to create
+ * @param dir_size the number of directories in the array directories
+ */
 void create_dirs(const char * base_dir, const char ** directories, size_t dir_size)
 {
     // create a the directores
@@ -161,6 +175,11 @@ void create_dirs(const char * base_dir, const char ** directories, size_t dir_si
 
 }
 
+/*
+ * @brief creates a file at the given directory
+ * @param base_dir the base directory to add directories too
+ * @param filename the name of the file to create
+ */
 static void create_file(const char * base_dir, const char * filename)
 {
     char * p_make_path = join_path(base_dir, filename);
@@ -182,6 +201,11 @@ static void create_file(const char * base_dir, const char * filename)
 
 }
 
+/*
+ * @brief copies the contents of one file to another
+ * @param src the path to the source file
+ * @param dest the path to the destination file
+ */
 static void copy_file(const char * src, const char * dest)
 {
     FILE * source = fopen(src, "r");
@@ -208,4 +232,20 @@ static void copy_file(const char * src, const char * dest)
     CLEAN_UP:
     fclose(source);
     fclose(destination);
+}
+
+/*
+ * @brief gets the directory of the pdir executable
+ * @return the directory path in an allocated string
+ */
+static char * get_exe_dir(void)
+{
+    char * full_path = calloc(PATH_MAX, sizeof(*full_path));
+    readlink("/proc/self/exe", full_path, PATH_MAX);
+    size_t len = strlen(full_path);
+    char * base_path = calloc(len, sizeof(*base_path));
+    strncpy(base_path, full_path, len - strlen("pdir"));
+    free(full_path);
+    full_path = NULL;
+    return base_path;
 }
