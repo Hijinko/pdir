@@ -44,7 +44,7 @@ int main(int argc, char ** argv)
     }
 
     // the direcoties that will be created
-    const char * directories[] = {"bin", "src", "include", "test"};
+    const char * directories[] = {"bin", "src", "include", "doc", "test"};
     // create a the directores
     size_t dir_size = sizeof(directories) / sizeof(*directories);
     create_dirs(base_dir, directories, dir_size);
